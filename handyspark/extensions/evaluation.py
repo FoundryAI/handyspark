@@ -2,7 +2,7 @@ import pandas as pd
 from operator import itemgetter
 from handyspark.plot import roc_curve, pr_curve
 from pyspark.mllib.evaluation import BinaryClassificationMetrics, MulticlassMetrics
-from pyspark.sql import SQLContext, DataFrame, functions as F
+from pyspark.sql import SQLContext, DataFrame
 from pyspark.sql.types import StructField, StructType, DoubleType
 
 def thresholds(self):
@@ -135,6 +135,66 @@ def plot_pr_curve(self, ax=None):
     metrics = self.getMetricsByThreshold().toPandas()
     return pr_curve(metrics.precision, metrics.recall, self.areaUnderPR, ax)
 
+def _get_value_from_confusion_matrix(self, actual, predicted):
+    """Helper to get value from confusion matrix
+
+    Parameter
+    ---------
+    actual: value from label
+    predicted: value from prediction
+    """
+    try:
+        return float(self.confusionMatrix().toArray()[actual][predicted])
+    except IndexError:
+        return float(0.0)
+
+
+def true_positives(self):
+    """Get true positives from confusion matrix"""
+    return self._get_value_from_confusion_matrix(1, 1)
+
+
+def false_positives(self):
+    """Get false positives from confusion matrix"""
+    return self._get_value_from_confusion_matrix(0, 1)
+
+
+def true_negatives(self):
+    """Get true negatives from confusion matrix"""
+    return self._get_value_from_confusion_matrix(0, 0)
+
+
+def false_negatives(self):
+    """Get false negatives from confusion matrix"""
+    return self._get_value_from_confusion_matrix(1, 0)
+
+
+def _handle_zero_division_metrics(numerator, denominator):
+    """Helper to handle dividing by zero exception"""
+    try:
+        return float(numerator / denominator)
+    except ZeroDivisionError:
+        return float(0.0)
+
+
+def sensitivity(self):
+    """Get sensitivity of model"""
+    return _handle_zero_division_metrics(self.true_positives(),
+                                         self.true_positives() + self.false_negatives())
+
+
+def specificity(self):
+    """Get specifity of model"""
+    return _handle_zero_division_metrics(self.true_negatives(),
+                                         self.true_negatives() + self.false_positives())
+
+
+def accuracy(self):
+    """Get accuracy of model"""
+    return _handle_zero_division_metrics(self.true_positives() + self.true_negatives(),
+                                         self.true_positives() + self.true_negatives() + self.false_positives() + self.false_negatives())
+
+
 def __init__(self, scoreAndLabels, scoreCol='score', labelCol='label'):
     if isinstance(scoreAndLabels, DataFrame):
         scoreAndLabels = (scoreAndLabels
@@ -163,3 +223,12 @@ BinaryClassificationMetrics.confusionMatrix = confusionMatrix
 BinaryClassificationMetrics.plot_roc_curve = plot_roc_curve
 BinaryClassificationMetrics.plot_pr_curve = plot_pr_curve
 BinaryClassificationMetrics.print_confusion_matrix = print_confusion_matrix
+BinaryClassificationMetrics._get_value_from_confusion_matrix = _get_value_from_confusion_matrix
+BinaryClassificationMetrics.true_positives = true_positives
+BinaryClassificationMetrics.false_positives = false_positives
+BinaryClassificationMetrics.true_negatives = true_negatives
+BinaryClassificationMetrics.false_negatives = false_negatives
+BinaryClassificationMetrics.sensitivity = sensitivity
+BinaryClassificationMetrics.specificity = specificity
+BinaryClassificationMetrics.accuracy = accuracy
+BinaryClassificationMetrics._handle_zero_division_metrics = _handle_zero_division_metrics
