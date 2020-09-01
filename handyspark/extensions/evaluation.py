@@ -1,6 +1,5 @@
 import pandas as pd
 from operator import itemgetter
-from handyspark.plot import roc_curve, pr_curve
 from pyspark.mllib.evaluation import BinaryClassificationMetrics, MulticlassMetrics
 from pyspark.sql import SQLContext, DataFrame
 from pyspark.sql.types import StructField, StructType, DoubleType
@@ -115,25 +114,6 @@ def print_confusion_matrix(self, threshold=0.5):
     df.columns = pd.MultiIndex.from_product([['Predicted'], df.columns])
     return df
 
-def plot_roc_curve(self, ax=None):
-    """Makes a plot of Receiver Operating Characteristic (ROC) curve.
-
-    Parameter
-    ---------
-    ax : matplotlib axes object, default None
-    """
-    metrics = self.getMetricsByThreshold().toPandas()
-    return roc_curve(metrics.fpr, metrics.recall, self.areaUnderROC, ax)
-
-def plot_pr_curve(self, ax=None):
-    """Makes a plot of Precision-Recall (PR) curve.
-
-    Parameter
-    ---------
-    ax : matplotlib axes object, default None
-    """
-    metrics = self.getMetricsByThreshold().toPandas()
-    return pr_curve(metrics.precision, metrics.recall, self.areaUnderPR, ax)
 
 def _get_value_from_confusion_matrix(self, actual, predicted):
     """Helper to get value from confusion matrix
